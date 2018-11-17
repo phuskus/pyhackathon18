@@ -1,5 +1,5 @@
 import random
-from hackathon2018.hackathon.utils.utils import DataMessage
+from hackathon.utils.utils import DataMessage
 
 class Environment:
     def __init__(self):
