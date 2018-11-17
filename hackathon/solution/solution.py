@@ -4,7 +4,7 @@ from hackathon.utils.control import Control
 from hackathon.utils.utils import ResultsMessage, DataMessage, PVMode, \
     TYPHOON_DIR, config_outs
 from hackathon.framework.http_server import prepare_dot_dir
-from hackathon.solution import Environment
+from hackathon.solution.Environment import Environment
 
 env = Environment()
 

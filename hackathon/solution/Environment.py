@@ -4,7 +4,7 @@ from hackathon.utils.utils import DataMessage
 class Environment:
     def __init__(self):
         self._state_count = 1
-        self._state = None
+        self.state = None
         self.consumers = []
         self.status = [True, True, True, True]
         self.battery = 0
