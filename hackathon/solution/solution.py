@@ -150,10 +150,13 @@ def worker(msg: DataMessage) -> ResultsMessage:
         #print("    bess p.ref: " + str(power_reference))
         #print("    pv_mode: " + str(pv_mode))
 
+
     prev_load_one = load_one
     prev_load_two = load_two
     prev_load_three = load_three
 
+    if power_reference > 5:
+        load_two = False
     return ResultsMessage(data_msg=msg,
                           load_one=load_one,
                           load_two=load_two,
