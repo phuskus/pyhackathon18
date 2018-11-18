@@ -100,6 +100,22 @@ def worker(msg: DataMessage) -> ResultsMessage:
             #print("--2")
             power_reference = power_required
 
+        elif power_required >= 0 and power_required <= kWminutes_left_in_bess and power_required > max_draw:
+            # Kill load_two, leave load_one
+            load_two = False
+            # Recalc power required and assess
+            coef = 1
+            if prev_load_two:
+                coef = 0.12
+            power_required = msg.current_load * coef - msg.solar_production
+            # print("----p.req: " + str(power_required))
+            if power_required <= kWminutes_left_in_bess and power_required <= max_draw:
+                # Ok
+                power_reference = power_required
+            else:
+                # No power left, kill one
+                load_one = False
+
         elif power_required < 0:
             #print("--3")
             # If there's more than 5 kW's for Bess, kill solar
