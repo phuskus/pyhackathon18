@@ -57,7 +57,7 @@ def worker(msg: DataMessage) -> ResultsMessage:
                 power_reference = clamp(-((1 - msg.bessSOC) * bessCap), -5.0, 0.0)
     else:
         #GRID IS OFFLINE
-        print("BLACKOUT")
+        #print("BLACKOUT (msgid: " + str(msg.id) + ")")
         # Consumer three off
         load_one = True
         load_two = True
@@ -72,27 +72,65 @@ def worker(msg: DataMessage) -> ResultsMessage:
             coef -= 0.2
 
         power_required = msg.current_load * coef - msg.solar_production
-
+        #print("--Init p.req: " + str(power_required))
         # If solar is enough to satisfy consumption (negative power_required), excess power charges bess ---> Prevent overcharging bess
         # If solar is NOT enough to satisfy consumption (positive power required), help with bess
-        if power_required > 5:
+        kWminutes_left_in_bess = bessCap * msg.bessSOC
+        max_draw = 5.0 #kW
+        #print("--kWm left: " + str(kWminutes_left_in_bess))
+
+        if power_required > kWminutes_left_in_bess:
+            #print("--1")
             # Kill load_two, leave load_one
             load_two = False
-            power_reference = 5.0
-        elif power_required > 0:
-            newSOC = msg.bessSOC - power_required/bessCap
-            if newSOC >= 0:
+            # Recalc power required and assess
+            coef = 1
+            if prev_load_two:
+                coef = 0.12
+            power_required = msg.current_load * coef - msg.solar_production
+            #print("----p.req: " + str(power_required))
+            if power_required <= kWminutes_left_in_bess and power_required <= max_draw:
+                # Ok
                 power_reference = power_required
             else:
-                load_two = False
-                if prev_load_two:
-                    power_required = msg.current_load * 0.12 - msg.solar_production
-                    newSOC = msg.bessSOC - power_required / bessCap
-                    if newSOC < 0:
-                        load_one = False
-                        power_reference = 0.0
-                    else:
+                # No power left, kill one
+                load_one = False
+
+        elif power_required >= 0 and power_required <= kWminutes_left_in_bess and power_required <= max_draw:
+            #print("--2")
+            power_reference = power_required
+
+        elif power_required < 0:
+            #print("--3")
+            # If there's more than 5 kW's for Bess, kill solar
+            if power_required < -5:
+                pv_mode = PVMode.OFF
+                # Supply power solely from bess
+                # Kill consumers if power_required > 5
+                power_required += msg.solar_production
+                #print("----p.req: " + str(power_required))
+                if power_required > kWminutes_left_in_bess:
+                    # Kill load_two, leave load_one
+                    load_two = False
+                    # Recalc power required and assess
+                    coef = 1
+                    if prev_load_two:
+                        coef = 0.12
+                    power_required = msg.current_load * coef - msg.solar_production
+                    if power_required <= kWminutes_left_in_bess and power_required <= max_draw:
+                        # Ok
                         power_reference = power_required
+                    else:
+                        # No power left, kill one
+                        load_one = False
+
+                elif power_required <= kWminutes_left_in_bess and power_required <= max_draw:
+                    power_reference = power_required
+        #print("END BLACKOUT")
+        #print("    load_one: " + str(load_one))
+        #print("    load_two: " + str(load_two))
+        #print("    bess p.ref: " + str(power_reference))
+        #print("    pv_mode: " + str(pv_mode))
 
     prev_load_one = load_one
     prev_load_two = load_two
